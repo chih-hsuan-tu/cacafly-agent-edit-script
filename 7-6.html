@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cacafly｜7-6 剪輯腳本 B copy（畫面對應）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; background: #f4f5f7; color: #1f2937; font-size: 14px; }
+  header { background: #1f2937; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .meta { font-size: 12px; color: #cbd5e1; }
+  header .btns { margin-left: auto; display: flex; gap: 8px; }
+  header button { padding: 6px 12px; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .btn-save { background: #6b7280; color: #fff; }
+  .btn-review { background: #10b981; color: #fff; }
+  .btn-editor { background: #f59e0b; color: #fff; }
+  .savetime { font-size: 12px; color: #cbd5e1; margin-left: 8px; }
+
+  .wrap { max-width: 1880px; margin: 0 auto; padding: 12px; display: grid; grid-template-columns: minmax(420px, 44%) 1fr; column-gap: 16px; align-items: start; }
+  .stage { position: sticky; top: 58px; height: calc(100vh - 74px); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .stage > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .stage .col-slide { flex: 1; min-height: 0; }
+  .preview-label { font-size: 12px; color: #6b7280; font-weight: 600; }
+  .video-wrap { width: 100%; background: #000; border-radius: 6px; overflow: hidden; }
+  .video-wrap video { width: 100%; max-height: 34vh; object-fit: contain; background: #000; display: block; }
+  .slide-wrap { width: 100%; flex: 1; min-height: 0; background: #000; border-radius: 6px; overflow: hidden; }
+  .slide-wrap iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  @media (max-width: 1100px) { .wrap { display: block; } .stage { position: static; height: auto; } .slide-wrap { aspect-ratio: 16/9; flex: none; } }
+
+  .video-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .video-controls button { padding: 5px 10px; background: #1f2937; color: #fff; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .video-controls input[type=range] { flex: 1; min-width: 100px; }
+  .video-controls .time { font-size: 12px; color: #4b5563; min-width: 90px; text-align: right; font-family: "SF Mono", Menlo, monospace; }
+  .video-controls select { padding: 4px; font-size: 12px; }
+  .seek-btns { display: flex; gap: 4px; }
+  .cut-btns { display: flex; gap: 6px; margin-left: auto; }
+  .cut-btns button { background: #dc2626; }
+  .cut-btns .pending { background: #f59e0b; }
+  .cut-label { font-size: 11px; color: #4b5563; padding: 0 6px; align-self: center; }
+
+  .slide-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .slide-controls button { padding: 5px 10px; background: #1f2937; color: #fff; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .slide-controls .ver-top { padding: 5px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; background: #fff; font-weight: 600; }
+  .slide-controls .slide-input { padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; width: 60px; font-family: "SF Mono", Menlo, monospace; }
+
+  table { width: calc(100% - 24px); border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; font-size: 13px; margin: 12px; }
+  #t { width: 100%; margin: 0; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; text-align: left; }
+  th { background: #f3f4f6; font-weight: 600; color: #374151; position: sticky; top: 0; }
+  td.tc { font-family: "SF Mono", Menlo, monospace; font-size: 12px; min-width: 130px; color: #1f2937; cursor: pointer; }
+  td.tc:hover { background: #eff6ff; }
+  td.ver { min-width: 96px; }
+  td.ver select { width: 100%; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; font-family: inherit; }
+  td.sp { font-family: "SF Mono", Menlo, monospace; font-size: 12px; min-width: 64px; color: #2563eb; cursor: pointer; font-weight: 600; }
+  td.sp:hover { background: #eff6ff; }
+  td.lt { min-width: 180px; }
+  td.lt select { width: 100%; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; font-family: inherit; }
+  tr.fixed-row td { background: #fef3c7; }
+  tr.fixed-row td.sp { color: #92400e; }
+  tr.active td { background: #dcfce7 !important; }
+  tr.zh td { background: #dbeafe; font-weight: 600; }
+  tr.zn td { background: #f3f4f6; color: #6b7280; font-style: italic; font-size: 12px; }
+  .rc { padding: 4px !important; min-width: 60px; }
+  .rc button { padding: 2px 6px; background: #e5e7eb; border: 0; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 2px; }
+  .rc button:hover { background: #d1d5db; }
+
+  @media print {
+    body { background: #fff !important; font-size: 11px; color: #000; }
+    header { position: static; background: #fff !important; color: #000 !important; border-bottom: 2px solid #000; padding: 8px 0; }
+    header h1, header .meta { color: #000 !important; }
+    header .btns, header .savetime { display: none !important; }
+    .stage, .rc { display: none !important; }
+    .wrap { display: block; max-width: 100%; padding: 0; }
+    table { font-size: 10.5px; border: 1px solid #000; margin: 0; width: 100%; }
+    th, td { border: 1px solid #666; padding: 4px 6px; }
+    th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr.fixed-row td { background: #fef3c7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr.zh td { background: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr.zn td { background: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr { page-break-inside: avoid; }
+    td.lt select, td.ver select { border: 0; background: transparent; padding: 0; -webkit-appearance: none; appearance: none; }
+    @page { margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>cacaFly｜AI Agent 行銷應用關鍵</h1>
+  <span class="meta">7-6 從試點到規模化的落地路徑（現場發揮 QA）｜B copy（後製溝通）｜講師：吳振和</span>
+  <span class="savetime" id="savetime">已存檔 08:31</span>
+  <div class="btns">
+    <button class="btn-save" onclick="saveFile()">儲存</button>
+    <button class="btn-review" onclick="download('review')">下載審核版</button>
+    <button class="btn-editor" onclick="printPDF()">列印 PDF（剪輯師版）</button>
+    <button onclick="resetCache()" style="background:#9333ea; color:#fff;">重置</button>
+    <button onclick="addColumn()" style="background:#0891b2; color:#fff;">+ 欄位</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stage">
+  <div class="col-video">
+    <span class="preview-label">影片畫面（剪輯師版・影片未上傳，請對照你手上的 A copy 影片）</span>
+    <div class="video-wrap">
+      <video id="vid" preload="metadata"></video>
+    </div>
+    <div class="video-controls">
+      <button onclick="togglePlay()" id="btnPlay">⏸</button>
+      <div class="seek-btns">
+        <button onclick="seekRel(-10)">↩10s</button>
+        <button onclick="seekRel(-3)">↩3s</button>
+        <button onclick="seekRel(3)">3s→</button>
+        <button onclick="seekRel(10)">10s→</button>
+      </div>
+      <input type="range" id="scrub" value="0" min="0" max="100" step="0.1">
+      <span class="time" id="ttime">11:08 / 11:08</span>
+      <select onchange="setRate(this.value)">
+        <option value="0.75">0.75×</option>
+        <option value="1" selected="">1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select>
+      <div class="cut-btns">
+        <button id="btnCutStart" onclick="markCutStart()">✂ 起點 (D)</button>
+        <button id="btnCutEnd" onclick="markCutEnd()">✂ 終點＆切 (F)</button>
+        <span class="cut-label" id="cutLabel"></span>
+      </div>
+    </div>
+  </div>
+  <div class="col-slide">
+    <span class="preview-label">簡報畫面</span>
+    <div class="slide-wrap">
+      <iframe id="slideFrame" src="https://docs.google.com/presentation/d/1wGdcXLw7h0wfoZJaFs_5_Ax_NzpsE7KVINmIjL0GHmY/embed?start=false&amp;loop=false&amp;delayms=60000&amp;slide=20"></iframe>
+    </div>
+    <div class="slide-controls">
+      <select id="verSelect" class="ver-top" onchange="setSlide(document.getElementById('slideInput').value, this.value)">
+        <option value="製作人版">製作人版</option>
+        <option value="老師版">老師版</option>
+      </select>
+      <button onclick="goSlide(-1)">◀ 上一頁</button>
+      <button onclick="goSlide(1)">下一頁 ▶</button>
+      <span>跳到：</span>
+      <input type="number" class="slide-input" id="slideInput" min="1" max="22" value="19" onchange="setSlide(this.value)">
+      <span style="font-size:11px; color:#6b7280;">/ <span id="slideCountLabel">22</span>　QA 段無課程內容簡報；固定頁取製作人版</span>
+    </div>
+  </div>
+  </div>
+
+<table id="t">
+  <thead>
+    <tr>
+      <th style="width:130px;">初剪影片 time code</th>
+      <th style="width:96px;">簡報版本</th>
+      <th style="width:64px;">頁數</th>
+      <th>簡報填充文字內容</th>
+      <th style="width:200px;">版型檔名溝通</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="zh"><td colspan="5">7-6 從試點到規模化的落地路徑（現場發揮 QA）｜A copy 影片時長：見上方播放器</td></tr>
+
+    <!-- 開頭 5 個固定 row（固定頁全部取製作人版） -->
+    <tr class="fixed-row">
+      <td class="tc" contenteditable="true">純畫面</td>
+      <td class="ver" data-ver=""></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">—</td>
+      <td contenteditable="true">片頭動畫</td>
+      <td class="lt" data-lt="片頭動畫"></td>
+    </tr>
+    <tr class="fixed-row">
+      <td class="tc" contenteditable="true">純畫面</td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P1</td>
+      <td contenteditable="true">總課程封面</td>
+      <td class="lt" data-lt="00總課程封面"></td>
+    </tr>
+    <tr class="fixed-row">
+      <td class="tc" contenteditable="true">純畫面</td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P19</td>
+      <td contenteditable="true">單元封面</td>
+      <td class="lt" data-lt="01封面"></td>
+    </tr>
+    <tr class="fixed-row">
+      <td class="tc" contenteditable="true">純畫面</td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P2</td>
+      <td contenteditable="true">講師介紹</td>
+      <td class="lt" data-lt="04講師介紹"></td>
+    </tr>
+    <tr class="fixed-row">
+      <td class="tc" contenteditable="true">純畫面</td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P20</td>
+      <td contenteditable="true">學習目標</td>
+      <td class="lt" data-lt="02學習目標"></td>
+    </tr>
+
+    <tr class="zh"><td colspan="5">課程內容（現場 QA，無專屬簡報；剪輯時主持人提問口白被剪掉，下方為原始提問＋老師回答重點，時碼依逐字稿請對片補正）</td></tr>
+
+    <!-- 課程內容 row（現場 QA，4 題，版型為純講師對談畫面）-->
+    <tr data-srt="16">
+      <td class="tc" contenteditable="true" ondblclick="syncVid(this)">新增段落</td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P24</td>
+      <td contenteditable="true">停留 5 秒</td>
+      <td class="lt" data-lt="開框_04滿版"></td>
+    </tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">00:17-01:44</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">試點挑選準則：商業價值判斷</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">01:45-02:09</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">避免用跟風心態導入 AI</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">02:10-02:47</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">區分「導入 AI」與「導入 SI」的差異</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">02:48-03:09</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">從任務是否能轉換成語言模型操作切入思考</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">03:10-03:35</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">以 AI Agent Card 角度思考 AI 如何介入工作流程</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">新增段落</td><td class="ver" data-ver="製作人版"></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P25</td><td contenteditable="true">停留 5 秒</td><td class="lt" data-lt="開框_04滿版"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">03:36-03:37</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">刪除：這是一個很好的問題啦</td><td class="lt" data-lt=""></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">03:50-04:34</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">管理層思維對 AI 導入影響很大</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">04:35-04:43</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">在企業內部建立 AI 共享文化</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">04:44-05:28</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">管理層找出好例子、收斂回團隊工作流</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">05:29-06:24</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">失敗也值得擁抱，知道 AI 不能做什麼也是成功</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">新增段落</td><td class="ver" data-ver="製作人版"></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P26</td><td contenteditable="true"></td><td class="lt" data-lt="開框_04滿版"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">06:44-07:08</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">試點重點是「可複製」的方法論</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">07:09-07:29</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">要有共通資料集與判斷共識才能評鑑 AI</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">07:30-07:40</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">AI 導入誤區：想要 AI 解決問題，卻不投入數據與流程建立</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">07:41-09:04</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">先建立集體共識，再做任務拆解分工</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">新增段落</td><td class="ver" data-ver="製作人版"></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P27</td><td contenteditable="true"></td><td class="lt" data-lt="開框_04滿版"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">09:05-09:05</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">刪除：這是一個很好的問題啦</td><td class="lt" data-lt=""></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">09:06-10:28</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">把 AI／token 當成研發類預算編列</td><td class="lt" data-lt="字卡"></td></tr><tr><td class="tc" contenteditable="true" ondblclick="syncVid(this)">10:29-11:08</td><td class="ver" data-ver=""></td><td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td><td contenteditable="true">AI 成本未來只會更低，貴不貴是相對的</td><td class="lt" data-lt="字卡"></td></tr>
+    
+    
+    
+
+    <tr class="zh"><td colspan="5">結尾固定 row（固定頁全部取製作人版）</td></tr>
+
+    <!-- 結尾 2 個固定 row -->
+    <tr class="fixed-row" data-srt="570">
+      <td class="tc" contenteditable="true" ondblclick="syncVid(this)"><br></td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P21</td>
+      <td contenteditable="true">重點回顧</td>
+      <td class="lt" data-lt="03內文"></td>
+    </tr>
+    <tr class="fixed-row" data-srt="590">
+      <td class="tc" contenteditable="true" ondblclick="syncVid(this)"><br></td>
+      <td class="ver" data-ver="製作人版"></td>
+      <td class="sp" contenteditable="true" ondblclick="syncSlide(this)">P3</td>
+      <td contenteditable="true">警語</td>
+      <td class="lt" data-lt="06警語"></td>
+    </tr>
+
+    <tr class="zn"><td colspan="5">說明：黃底 row 為固定段落（每支影片都套用此順序），白底 row 為課程內容動態填。本單元為現場 QA，課程內容段沒有專屬簡報。雙擊時碼可 seek 影片；雙擊頁數可切換右側簡報（會依該列「簡報版本」載入老師版或製作人版）。版本欄下拉選老師版／製作人版，頁數欄自由填 P3、3-5 等。版型欄下拉選對應檔名給剪輯師。挑版型原則：字少／概念簡單 → 03 講師左；字多／demo → 04 滿版（吳老師坐左邊，故不用 02 講師右）。</td></tr>
+  </tbody>
+</table>
+</div>
+
+<script>
+const SKEY = 'edit_wuzhenhe_7-6_B_v3';
+
+// 兩份簡報來源
+const SLIDES = {
+  '老師版':   { id: '1bdiaqkXjHGEGDxuw6PmMN9q_Y--IpXiNHfhe0hhic40', count: 82 },
+  '製作人版': { id: '1wGdcXLw7h0wfoZJaFs_5_Ax_NzpsE7KVINmIjL0GHmY', count: 22 },
+};
+const VERS = ['製作人版', '老師版'];
+let curVer = '製作人版';
+
+// 版型清單（無空格，跟 Drive 來源檔名一致）
+const LAYOUTS = [
+  '片頭動畫',
+  '00總課程封面',
+  '01封面',
+  '02學習目標',
+  '03內文',
+  '04講師介紹',
+  '06警語',
+  '開框_01簡報講師1-1',
+  '開框_03講師左',
+  '開框_04滿版',
+  '開框_05上下框_02上下框4',
+  '純講師畫面',
+  '字卡',
+];
+// 註：開框_02 講師右本案不用（吳老師坐左邊）
+
+// 版本欄渲染（下拉：製作人版／老師版／未選）
+function renderVerCell(td) {
+  const cur = td.dataset.ver || '';
+  const select = document.createElement('select');
+  const blank = document.createElement('option');
+  blank.value = ''; blank.textContent = '—';
+  blank.selected = !cur;
+  select.appendChild(blank);
+  VERS.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    if (v === cur) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.addEventListener('change', () => {
+    td.dataset.ver = select.value;
+    autoSave();
+  });
+  td.innerHTML = '';
+  td.appendChild(select);
+}
+
+// 版型欄渲染（只有下拉，無預覽圖）
+function renderLayoutCell(td) {
+  const cur = td.dataset.lt || '';
+  const select = document.createElement('select');
+  if (!LAYOUTS.includes(cur)) {
+    const blank = document.createElement('option');
+    blank.value = ''; blank.textContent = '— 未選 —';
+    blank.selected = !cur;
+    select.appendChild(blank);
+  }
+  LAYOUTS.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l; opt.textContent = l;
+    if (l === cur) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.addEventListener('change', () => {
+    td.dataset.lt = select.value;
+    autoSave();
+  });
+  td.innerHTML = '';
+  td.appendChild(select);
+}
+
+// 影片控制
+const vid = document.getElementById('vid');
+const scrub = document.getElementById('scrub');
+const ttime = document.getElementById('ttime');
+const btnPlay = document.getElementById('btnPlay');
+
+function togglePlay() {
+  if (vid.paused) { vid.play(); btnPlay.textContent = '⏸'; }
+  else { vid.pause(); btnPlay.textContent = '▶'; }
+}
+function fmt(s) {
+  if (isNaN(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60), ss = Math.floor(s % 60);
+  return String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+}
+function setRate(r) { vid.playbackRate = parseFloat(r); }
+function seekRel(d) { vid.currentTime = Math.max(0, Math.min(vid.duration || 0, vid.currentTime + d)); }
+vid.addEventListener('timeupdate', () => {
+  if (vid.duration) {
+    scrub.value = (vid.currentTime / vid.duration) * 100;
+    ttime.textContent = fmt(vid.currentTime) + ' / ' + fmt(vid.duration);
+  }
+});
+vid.addEventListener('loadedmetadata', () => {
+  ttime.textContent = fmt(0) + ' / ' + fmt(vid.duration);
+});
+scrub.addEventListener('input', () => {
+  if (vid.duration) vid.currentTime = (scrub.value / 100) * vid.duration;
+});
+
+// 簡報切換（帶版本）
+function parseSlideNum(text) {
+  if (!text) return null;
+  const m = String(text).match(/\d+/);
+  return m ? parseInt(m[0]) : null;
+}
+function setSlide(n, ver) {
+  ver = (ver && SLIDES[ver]) ? ver : curVer;
+  const meta = SLIDES[ver];
+  n = parseInt(n);
+  if (!n || n < 1) n = 1;
+  if (n > meta.count) n = meta.count;
+  curVer = ver;
+  document.getElementById('slideFrame').src =
+    'https://docs.google.com/presentation/d/' + meta.id + '/embed?start=false&loop=false&delayms=60000&slide=' + n;
+  document.getElementById('slideInput').value = n;
+  document.getElementById('slideInput').max = meta.count;
+  document.getElementById('verSelect').value = ver;
+  document.getElementById('slideCountLabel').textContent = meta.count;
+}
+function goSlide(d) {
+  const cur = parseInt(document.getElementById('slideInput').value) || 1;
+  setSlide(cur + d, curVer);
+}
+
+// 雙擊時碼同步影片
+function parseTime(text) {
+  const m = String(text).match(/(\d+):(\d+)/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 0;
+}
+function rowVer(tr) {
+  const v = tr.querySelector('.ver');
+  const val = v ? (v.dataset.ver || '') : '';
+  return (val && SLIDES[val]) ? val : curVer;
+}
+function syncVid(tcEl) {
+  const tr = tcEl.closest('tr');
+  document.querySelectorAll('tr.active').forEach(r => r.classList.remove('active'));
+  tr.classList.add('active');
+  const srt = parseFloat(tr.dataset.srt);
+  vid.currentTime = isNaN(srt) ? parseTime(tcEl.textContent) : srt;
+  vid.play(); btnPlay.textContent = '⏸';
+  // 同時同步簡報（找 row 內 sp 欄解析頁碼，依該列版本載入）
+  const spEl = tr.querySelector('.sp');
+  if (spEl) {
+    const n = parseSlideNum(spEl.textContent);
+    if (n) setSlide(n, rowVer(tr));
+  }
+}
+function syncSlide(spEl) {
+  const tr = spEl.closest('tr');
+  const n = parseSlideNum(spEl.textContent);
+  if (n) setSlide(n, rowVer(tr));
+  document.querySelectorAll('tr.active').forEach(r => r.classList.remove('active'));
+  tr.classList.add('active');
+}
+
+// 智能插入剪輯（D / F）
+// 兩個關鍵行為：
+//   1. 新切點按時間順位插入正確位置（不能直接塞末尾）
+//   2. 原 row 切成「前段／新切段／後段」3 段，時碼自動調整
+let pendingCutStart = null;
+function markCutStart() {
+  pendingCutStart = vid.currentTime;
+  document.getElementById('cutLabel').textContent = '起點 ' + fmt(pendingCutStart);
+  document.getElementById('btnCutStart').classList.add('pending');
+}
+function parseTcRange(tcText) {
+  const m = String(tcText).match(/(\d+):(\d+)-(\d+):(\d+)/);
+  if (!m) return null;
+  return [parseInt(m[1])*60 + parseInt(m[2]), parseInt(m[3])*60 + parseInt(m[4])];
+}
+function makeRow(start, end, ver, sp, text, lt) {
+  const tr = document.createElement('tr');
+  tr.dataset.srt = start;
+  tr.innerHTML =
+    '<td class="tc" contenteditable="true" ondblclick="syncVid(this)">' + fmt(start) + '-' + fmt(end) + '</td>' +
+    '<td class="ver" data-ver="' + (ver || '') + '"></td>' +
+    '<td class="sp" contenteditable="true" ondblclick="syncSlide(this)">' + (sp || '—') + '</td>' +
+    '<td contenteditable="true">' + (text || '') + '</td>' +
+    '<td class="lt" data-lt="' + (lt || '') + '"></td>';
+  return tr;
+}
+function markCutEnd() {
+  if (pendingCutStart == null) { alert('請先按起點'); return; }
+  const cutStart = pendingCutStart, cutEnd = vid.currentTime;
+  pendingCutStart = null;
+  document.getElementById('btnCutStart').classList.remove('pending');
+  document.getElementById('cutLabel').textContent = '';
+  if (cutEnd <= cutStart) { alert('終點必須晚於起點'); return; }
+
+  // 找所有有 data-srt 的 row，按時碼起點排序
+  const rows = Array.from(document.querySelectorAll('#t tbody tr[data-srt]'))
+    .filter(r => r.querySelector('.tc'));
+  rows.sort((a, b) => {
+    const ra = parseTcRange(a.querySelector('.tc').textContent);
+    const rb = parseTcRange(b.querySelector('.tc').textContent);
+    return (ra ? ra[0] : 0) - (rb ? rb[0] : 0);
+  });
+
+  // 找 cutStart 落在哪個 row
+  let targetRow = null;
+  for (const r of rows) {
+    const range = parseTcRange(r.querySelector('.tc').textContent);
+    if (!range) continue;
+    if (cutStart >= range[0] && cutStart < range[1]) { targetRow = r; break; }
+  }
+
+  if (!targetRow) {
+    // 不在任何 row 範圍內：按時間順位插入
+    const newRow = makeRow(cutStart, cutEnd, '', '', '手動切點', '');
+    let inserted = false;
+    for (const r of rows) {
+      const range = parseTcRange(r.querySelector('.tc').textContent);
+      if (range && range[0] > cutStart) {
+        r.parentNode.insertBefore(newRow, r);
+        inserted = true; break;
+      }
+    }
+    if (!inserted && rows.length) {
+      const last = rows[rows.length-1];
+      last.parentNode.insertBefore(newRow, last.nextSibling);
+    }
+    initRows(); autoSave();
+    return;
+  }
+
+  // 落在 targetRow 內：切成 3 段
+  const [origStart, origEnd] = parseTcRange(targetRow.querySelector('.tc').textContent);
+  const origVer = targetRow.querySelector('.ver')?.dataset.ver || '';
+  const origSp = targetRow.querySelector('.sp')?.textContent || '';
+  const origText = targetRow.children[3]?.innerHTML || '';
+  const origLt = targetRow.querySelector('.lt')?.dataset.lt || '';
+
+  // 1. 前段：修改 targetRow 時碼（若有前段）
+  const hasPre = cutStart > origStart;
+  if (hasPre) {
+    targetRow.querySelector('.tc').textContent = fmt(origStart) + '-' + fmt(cutStart);
+  } else {
+    // 沒前段：targetRow 變成新切段本身
+    targetRow.querySelector('.tc').textContent = fmt(cutStart) + '-' + fmt(cutEnd);
+    targetRow.dataset.srt = cutStart;
+    const verTd = targetRow.querySelector('.ver');
+    verTd.innerHTML = ''; verTd.dataset.ver = '';
+    targetRow.querySelector('.sp').textContent = '—';
+    targetRow.children[3].innerHTML = '手動切點';
+    targetRow.querySelector('.lt').dataset.lt = '';
+  }
+
+  // 2. 新切段 row（只在有前段時建立，否則 targetRow 已當切段用）
+  let cutRow = null;
+  if (hasPre) {
+    cutRow = makeRow(cutStart, cutEnd, '', '', '手動切點', '');
+    targetRow.parentNode.insertBefore(cutRow, targetRow.nextSibling);
+  }
+
+  // 3. 後段 row（若有後段，複製原內容）
+  if (cutEnd < origEnd) {
+    const postRow = makeRow(cutEnd, origEnd, origVer, origSp, origText, origLt);
+    const anchor = cutRow || targetRow;
+    anchor.parentNode.insertBefore(postRow, anchor.nextSibling);
+  }
+
+  initRows();
+  autoSave();
+}
+
+// row 控制按鈕
+function initRows() {
+  document.querySelectorAll('#t tbody tr').forEach(tr => {
+    if (tr.classList.contains('zh') || tr.classList.contains('zn')) return;
+    let rc = tr.querySelector('.rc');
+    if (!rc) {
+      rc = document.createElement('td');
+      rc.className = 'rc';
+      rc.innerHTML = '<button onclick="addRow(this)">＋</button><button onclick="delRow(this)">✕</button>';
+      tr.appendChild(rc);
+    }
+    const ver = tr.querySelector('td.ver');
+    if (ver && !ver.querySelector('select')) renderVerCell(ver);
+    const lt = tr.querySelector('td.lt');
+    if (lt && !lt.querySelector('select')) renderLayoutCell(lt);
+  });
+}
+function addRow(btn) {
+  const tr = btn.closest('tr');
+  const cols = document.querySelectorAll('#t thead th').length;
+  const newTr = document.createElement('tr');
+  let html =
+    '<td class="tc" contenteditable="true" ondblclick="syncVid(this)"></td>' +
+    '<td class="ver" data-ver=""></td>' +
+    '<td class="sp" contenteditable="true" ondblclick="syncSlide(this)"></td>' +
+    '<td contenteditable="true"></td>' +
+    '<td class="lt" data-lt=""></td>';
+  for (let i = 5; i < cols; i++) html += '<td contenteditable="true"></td>';
+  newTr.innerHTML = html;
+  tr.parentNode.insertBefore(newTr, tr.nextSibling);
+  initRows();
+  autoSave();
+}
+function delRow(btn) {
+  if (!confirm('刪除此列？')) return;
+  btn.closest('tr').remove();
+  autoSave();
+}
+
+// 鍵盤快捷鍵
+document.addEventListener('keydown', e => {
+  const ae = document.activeElement;
+  const inEdit = ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
+  if (e.code === 'Escape' && inEdit) { ae.blur(); e.preventDefault(); return; }
+  if (inEdit) return;
+  if (e.code === 'KeyD') { markCutStart(); e.preventDefault(); }
+  else if (e.code === 'KeyF') { markCutEnd(); e.preventDefault(); }
+  else if (e.code === 'Space') { togglePlay(); e.preventDefault(); }
+  else if (e.code === 'ArrowLeft') { seekRel(e.shiftKey ? -10 : -3); e.preventDefault(); }
+  else if (e.code === 'ArrowRight') { seekRel(e.shiftKey ? 10 : 3); e.preventDefault(); }
+});
+
+// 自動存（localStorage + File System API）
+let saveTimer = null, fileHandle = null;
+function snapshotForSave() {
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelectorAll('.rc').forEach(el => el.remove());
+  clone.querySelectorAll('tr.active').forEach(el => el.classList.remove('active'));
+  // 版本欄只存原始 data-ver（清掉動態 select，因為 initRows 會重建）
+  clone.querySelectorAll('td.ver').forEach(td => {
+    const val = td.dataset.ver || '';
+    td.innerHTML = '';
+    td.setAttribute('data-ver', val);
+  });
+  // 版型欄只存原始 data-lt（清掉動態 select，因為 initRows 會重建）
+  clone.querySelectorAll('td.lt').forEach(td => {
+    const val = td.dataset.lt || '';
+    td.innerHTML = '';
+    td.setAttribute('data-lt', val);
+  });
+  return clone;
+}
+function autoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const clone = snapshotForSave();
+    localStorage.setItem(SKEY, clone.outerHTML);
+    if (fileHandle) {
+      try {
+        const w = await fileHandle.createWritable();
+        await w.write('<!DOCTYPE html>\n' + clone.outerHTML);
+        await w.close();
+        const now = new Date();
+        document.getElementById('savetime').textContent = '自動存 ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+      } catch (e) {}
+    }
+  }, 1200);
+}
+document.addEventListener('input', autoSave);
+window.addEventListener('beforeunload', () => {
+  clearTimeout(saveTimer);
+  localStorage.setItem(SKEY, snapshotForSave().outerHTML);
+});
+
+// File System API
+(async function tryRestoreHandle() {
+  try {
+    const key = SKEY.replace('edit_', 'fsh_');
+    const req = indexedDB.open('edit_db', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+    const db = await new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
+    const tx = db.transaction('handles', 'readonly');
+    const h = await new Promise(res => { const r = tx.objectStore('handles').get(key); r.onsuccess = () => res(r.result); });
+    if (h) {
+      const perm = await h.queryPermission({mode: 'readwrite'});
+      if (perm === 'granted') fileHandle = h;
+    }
+  } catch (e) {}
+})();
+async function getHandle() {
+  if (fileHandle) {
+    try {
+      const perm = await fileHandle.queryPermission({mode: 'readwrite'});
+      if (perm === 'granted' || (await fileHandle.requestPermission({mode: 'readwrite'})) === 'granted') return fileHandle;
+    } catch (e) {}
+  }
+  fileHandle = await window.showSaveFilePicker({
+    suggestedName: 'cacafly_7-6_剪輯腳本_B.html',
+    types: [{description: 'HTML', accept: {'text/html': ['.html']}}]
+  });
+  const key = SKEY.replace('edit_', 'fsh_');
+  const req2 = indexedDB.open('edit_db', 1);
+  req2.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+  const db2 = await new Promise((res, rej) => { req2.onsuccess = () => res(req2.result); req2.onerror = () => rej(req2.error); });
+  const tx2 = db2.transaction('handles', 'readwrite');
+  tx2.objectStore('handles').put(fileHandle, key);
+  return fileHandle;
+}
+async function saveFile() {
+  try {
+    const h = await getHandle();
+    const w = await h.createWritable();
+    const clone = snapshotForSave();
+    await w.write('<!DOCTYPE html>\n' + clone.outerHTML);
+    await w.close();
+    const now = new Date();
+    document.getElementById('savetime').textContent = '已存檔 ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  } catch (e) { alert('存檔失敗：' + e.message); }
+}
+function printPDF() { window.print(); }
+function resetCache() {
+  if (!confirm('確定要重置？將清除瀏覽器內的編輯快取，HTML 檔案內最新版本會重新載入。已透過儲存按鈕寫進檔案的內容不會丟。')) return;
+  localStorage.removeItem(SKEY);
+  location.reload();
+}
+function addColumn() {
+  const name = prompt('輸入新欄位名稱（例：剪輯師備註、進度狀態）');
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  const thead = document.querySelector('#t thead tr');
+  const th = document.createElement('th');
+  th.textContent = trimmed;
+  thead.appendChild(th);
+  document.querySelectorAll('#t tbody tr').forEach(tr => {
+    const csTd = tr.querySelector('td[colspan]');
+    if (csTd) {
+      csTd.setAttribute('colspan', parseInt(csTd.getAttribute('colspan')) + 1);
+    } else {
+      const rc = tr.querySelector('.rc');
+      const td = document.createElement('td');
+      td.setAttribute('contenteditable', 'true');
+      if (rc) tr.insertBefore(td, rc);
+      else tr.appendChild(td);
+    }
+  });
+  autoSave();
+}
+function download(mode) {
+  const clone = snapshotForSave();
+  const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+  const blob = new Blob([html], {type: 'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cacafly_7-6_剪輯腳本_B_' + mode + '.html';
+  a.click();
+}
+
+// localStorage 載入
+(function restore() {
+  const saved = localStorage.getItem(SKEY);
+  if (!saved) return;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(saved, 'text/html');
+    const savedTbody = doc.querySelector('#t tbody');
+    if (savedTbody) {
+      document.querySelector('#t tbody').innerHTML = savedTbody.innerHTML;
+    }
+    const savedThead = doc.querySelector('#t thead tr');
+    if (savedThead && savedThead.children.length !== document.querySelector('#t thead tr').children.length) {
+      document.querySelector('#t thead tr').innerHTML = savedThead.innerHTML;
+    }
+  } catch (e) { console.error(e); }
+})();
+
+initRows();
+</script>
+
+</body></html>
